@@ -4,8 +4,18 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 
+function getAllowedOrigins() {
+  const configured = process.env.CORS_ORIGIN || process.env.FRONTEND_URL || "";
+  return configured
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+}
+
 const app = express();
 const httpServer = createServer(app);
+const allowedOrigins = getAllowedOrigins();
+const shouldServeStatic = process.env.NODE_ENV === "production" && process.env.SERVE_STATIC !== "false";
 
 declare module "http" {
   interface IncomingMessage {
@@ -22,6 +32,31 @@ app.use(
 );
 
 app.use(express.urlencoded({ extended: false }));
+
+app.get("/health", (_req, res) => {
+  res.json({ ok: true });
+});
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+
+  if (!origin) {
+    return next();
+  }
+
+  if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+    res.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  }
+
+  if (req.method === "OPTIONS") {
+    return res.status(204).end();
+  }
+
+  next();
+});
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -79,9 +114,9 @@ app.use((req, res, next) => {
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
-  if (process.env.NODE_ENV === "production") {
+  if (shouldServeStatic) {
     serveStatic(app);
-  } else {
+  } else if (process.env.NODE_ENV !== "production") {
     const { setupVite } = await import("./vite");
     await setupVite(httpServer, app);
   }
@@ -91,7 +126,7 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || "5000", 10);
-  httpServer.listen(port, "localhost", () => {
+  httpServer.listen(port, () => {
     log(`serving on port ${port}`);
   });
 })();

@@ -50,9 +50,85 @@ El build genera:
 - `dist/public` para el frontend
 - `dist/index.cjs` para el servidor Express
 
+## Frontend y backend separados
+
+El frontend puede desplegarse de forma independiente en Firebase Hosting.
+
+El backend puede desplegarse aparte en Render, Railway, Cloud Run u otro servicio Node.
+
+### Variables clave para la separación
+
+- `VITE_API_BASE_URL`: URL pública del backend, por ejemplo `https://attendance-api.onrender.com`
+- `CORS_ORIGIN`: origen permitido para el frontend, por ejemplo `https://asistencia-7fbf5.web.app`
+
+### Desarrollo local separado
+
+Frontend:
+
+```bash
+npm run dev
+```
+
+Backend:
+
+- corre en `http://localhost:5000`
+- el frontend usa `VITE_API_BASE_URL`
+
+### Deploy del frontend en Firebase Hosting
+
+1. Ajusta `VITE_API_BASE_URL` al dominio real de tu backend.
+2. Ejecuta:
+
+```bash
+npm run build
+firebase deploy --only hosting
+```
+
+3. Firebase publicará el contenido de `dist/public` usando [firebase.json](firebase.json).
+
+### Deploy del backend por separado
+
+Despliega el backend Node en un servicio externo y define al menos estas variables:
+
+- `FIREBASE_PROJECT_ID`
+- `FIREBASE_STORAGE_BUCKET`
+- `FIREBASE_CLIENT_EMAIL` o credenciales por defecto del entorno
+- `FIREBASE_PRIVATE_KEY` o credenciales por defecto del entorno
+- `CORS_ORIGIN`
+
+### Deploy del backend en Coolify
+
+Este repo ya incluye [Dockerfile](Dockerfile) para desplegar solo la API en Coolify.
+
+Pasos en Coolify:
+
+1. Crea un nuevo recurso desde repositorio Git.
+2. Selecciona Dockerfile como método de despliegue.
+3. Usa la raíz del proyecto como contexto.
+4. Expón el puerto `5000`.
+5. Configura health check en `/health`.
+6. Agrega estas variables de entorno:
+
+- `PORT=5000`
+- `SERVE_STATIC=false`
+- `CORS_ORIGIN=https://tu-frontend.web.app`
+- `FIREBASE_PROJECT_ID=asistencia-7fbf5`
+- `FIREBASE_STORAGE_BUCKET=asistencia-7fbf5.firebasestorage.app`
+- `FIREBASE_CLIENT_EMAIL=...`
+- `FIREBASE_PRIVATE_KEY=...`
+
+Si tu proveedor de infraestructura para Coolify ya entrega credenciales por defecto a Google Cloud, puedes omitir `FIREBASE_CLIENT_EMAIL` y `FIREBASE_PRIVATE_KEY`. En la mayoría de instalaciones de Coolify no ocurre, así que normalmente sí debes configurarlas.
+
+Comandos equivalentes fuera de Coolify:
+
+```bash
+npm run build:backend
+npm run start:backend
+```
+
 ## Deploy en Firebase
 
-La opción recomendada para este repo es Firebase App Hosting, porque la app usa React, Vite y un backend Express en el mismo proyecto.
+Si no quieres separar frontend y backend, la opción recomendada sigue siendo Firebase App Hosting, porque la app usa React, Vite y un backend Express en el mismo proyecto.
 
 Este repo ya incluye [apphosting.yaml](apphosting.yaml) y [.firebaserc](.firebaserc).
 

@@ -1,0 +1,11 @@
+node_modules
+dist
+dist-backend
+.git
+.gitignore
+.env
+.env.*
+firebase-debug.log
+npm-debug.log
+client
+attached_assets
