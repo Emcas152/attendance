@@ -7,5 +7,4 @@ dist-backend
 .env.*
 firebase-debug.log
 npm-debug.log
-client
-attached_assets
+
